@@ -313,31 +313,6 @@ app.post('/api/respond', (req, res) => {
   }
 });
 
-
-// ─── UPDATE PROFILE ────────────────────────────────────────────────────────
-app.post('/api/users/:id/update', (req, res) => {
-  const { display_name } = req.body;
-  if (!display_name || !display_name.trim()) return res.status(400).json({ error: 'Name required' });
-  db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(display_name.trim(), req.params.id);
-  const user = db.prepare('SELECT id, username, display_name, avatar_color, avatar_emoji FROM users WHERE id = ?').get(req.params.id);
-  res.json({ success: true, user });
-});
-
-// ─── CHANGE PASSWORD ────────────────────────────────────────────────────────
-app.post('/api/change-password', async (req, res) => {
-  const { user_id, current_password, new_password } = req.body;
-  if (!new_password || new_password.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(user_id);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  if (user.password_hash) {
-    const valid = await bcrypt.compare(current_password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
-  }
-  const hash = await bcrypt.hash(new_password, 10);
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, user_id);
-  res.json({ success: true });
-});
-
 // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
 app.get('/api/notifications/:user_id', (req, res) => {
   const notifs = db.prepare(`

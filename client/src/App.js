@@ -508,135 +508,6 @@ function NotificationsPanel({ user, onClose }) {
   );
 }
 
-// ─── PROFILE PANEL ─────────────────────────────────────────────────────────
-function ProfilePanel({ user, onClose, onLogout }) {
-  const [tab, setTab] = useState('profile');
-  const [displayName, setDisplayName] = useState(user.display_name);
-  const [currentPw, setCurrentPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
-
-  const stats = { joined: new Date(user.created_at * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
-
-  async function saveProfile() {
-    if (!displayName.trim()) return;
-    setSaving(true); setMsg(null);
-    try {
-      const res = await api(\`/users/\${user.id}/update\`, {
-        method: 'POST',
-        body: JSON.stringify({ display_name: displayName.trim() })
-      });
-      if (res.error) { setMsg({ type: 'error', text: res.error }); return; }
-      const updated = { ...user, display_name: displayName.trim() };
-      localStorage.setItem('wh_user', JSON.stringify(updated));
-      setMsg({ type: 'success', text: 'Profile updated!' });
-    } finally { setSaving(false); }
-  }
-
-  async function changePassword() {
-    if (newPw.length < 6) { setMsg({ type: 'error', text: 'Password must be at least 6 characters' }); return; }
-    if (newPw !== confirmPw) { setMsg({ type: 'error', text: 'Passwords do not match' }); return; }
-    setSaving(true); setMsg(null);
-    try {
-      const res = await api('/change-password', {
-        method: 'POST',
-        body: JSON.stringify({ user_id: user.id, current_password: currentPw, new_password: newPw })
-      });
-      if (res.error) { setMsg({ type: 'error', text: res.error }); return; }
-      setMsg({ type: 'success', text: 'Password changed!' });
-      setCurrentPw(''); setNewPw(''); setConfirmPw('');
-    } finally { setSaving(false); }
-  }
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="friends-panel" onClick={e => e.stopPropagation()}>
-        <div className="panel-header">
-          <h2>👤 Account</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
-        </div>
-
-        {/* Profile hero */}
-        <div className="profile-hero">
-          <Avatar user={user} size={60} />
-          <div className="profile-hero-info">
-            <div className="profile-name">{user.display_name}</div>
-            <div className="profile-username">@{user.username}</div>
-            <div className="profile-joined">Member since {stats.joined}</div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="friend-tabs">
-          <button className={tab === 'profile' ? 'active' : ''} onClick={() => { setTab('profile'); setMsg(null); }}>Profile</button>
-          <button className={tab === 'password' ? 'active' : ''} onClick={() => { setTab('password'); setMsg(null); }}>Password</button>
-        </div>
-
-        <div className="friends-list">
-          {msg && (
-            <div className={msg.type === 'error' ? 'error-msg' : 'success-msg'}>
-              {msg.type === 'error' ? '⚠️ ' : '✓ '}{msg.text}
-            </div>
-          )}
-
-          {tab === 'profile' && (
-            <>
-              <div className="field">
-                <label>Display name</label>
-                <input value={displayName} onChange={e => setDisplayName(e.target.value)}
-                  placeholder="Your display name" style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text)', fontFamily: 'Inter, sans-serif', fontSize: '14px', outline: 'none', width: '100%' }} />
-              </div>
-              <div className="field" style={{ marginTop: 4 }}>
-                <label>Username</label>
-                <div style={{ padding: '10px 12px', background: 'var(--bg4)', borderRadius: 'var(--radius-sm)', fontSize: '14px', color: 'var(--text3)', border: '1px solid var(--border)' }}>@{user.username}</div>
-                <span style={{ fontSize: '11px', color: 'var(--text3)', marginTop: 4 }}>Username cannot be changed</span>
-              </div>
-              <button className="btn-primary" onClick={saveProfile} disabled={saving || !displayName.trim()}>
-                {saving ? 'Saving...' : 'Save changes'}
-              </button>
-            </>
-          )}
-
-          {tab === 'password' && (
-            <>
-              <div className="field">
-                <label>Current password</label>
-                <div className="password-wrap" style={{ display: 'flex', position: 'relative', alignItems: 'center' }}>
-                  <input type={showPw ? 'text' : 'password'} value={currentPw} onChange={e => setCurrentPw(e.target.value)}
-                    placeholder="Current password" style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', padding: '10px 40px 10px 12px', color: 'var(--text)', fontFamily: 'Inter, sans-serif', fontSize: '14px', outline: 'none', width: '100%' }} />
-                  <button type="button" onClick={() => setShowPw(s => !s)} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', fontSize: 14, cursor: 'pointer', color: 'var(--text3)' }}>{showPw ? '🙈' : '👁️'}</button>
-                </div>
-              </div>
-              <div className="field">
-                <label>New password</label>
-                <input type={showPw ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)}
-                  placeholder="At least 6 characters" style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text)', fontFamily: 'Inter, sans-serif', fontSize: '14px', outline: 'none', width: '100%' }} />
-              </div>
-              <div className="field">
-                <label>Confirm new password</label>
-                <input type={showPw ? 'text' : 'password'} value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
-                  placeholder="Repeat new password" style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text)', fontFamily: 'Inter, sans-serif', fontSize: '14px', outline: 'none', width: '100%' }} />
-              </div>
-              <button className="btn-primary" onClick={changePassword} disabled={saving || !currentPw || !newPw || !confirmPw}>
-                {saving ? 'Changing...' : 'Change password'}
-              </button>
-            </>
-          )}
-
-          <div className="profile-divider" />
-
-          <button className="btn-signout" onClick={onLogout}>
-            <span>🚪</span> Sign out
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── MAIN APP ──────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -647,7 +518,6 @@ export default function App() {
   const [showComposer, setShowComposer] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -709,7 +579,7 @@ export default function App() {
             {unreadCount > 0 && <span className="notif-dot">{unreadCount}</span>}
           </button>
           <button className="icon-btn" onClick={() => setShowFriends(true)}>👥</button>
-          <button className="avatar-btn" onClick={() => setShowProfile(true)}>
+          <button className="avatar-btn" onClick={logout}>
             <Avatar user={user} size={32} />
           </button>
         </div>
@@ -795,7 +665,6 @@ export default function App() {
       )}
       {showFriends && <FriendsPanel user={user} onClose={() => { setShowFriends(false); loadData(); }} />}
       {showNotifs && <NotificationsPanel user={user} onClose={() => { setShowNotifs(false); setUnreadCount(0); }} />}
-      {showProfile && <ProfilePanel user={user} onClose={() => setShowProfile(false)} onLogout={() => { localStorage.removeItem('wh_user'); setUser(null); }} />}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
